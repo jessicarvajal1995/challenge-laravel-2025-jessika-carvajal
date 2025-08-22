@@ -29,22 +29,31 @@ class AdvanceOrderStatusUseCase
             throw new \DomainException("Order not found with ID: {$command->orderId}");
         }
 
-        // Actualiza el estado usando lógica de dominio
         $order->advanceStatus();
 
-        // Guardar usando el repositorio
-        $this->orderRepository->save($order);
+        $orderDto = OrderDto::fromDomain($order);
 
-        // Limpiar caché luego de actualizar el estado
+        // Si la orden llega a "delivered", la elimino de la base de datos y del cache 
+        if ($order->isDelivered()) {
+            $this->orderRepository->delete($orderId);
+            
+            $this->logger->info('Order delivered and deleted successfully', [
+                'order_id' => $order->id()->value(),
+                'client_name' => $order->clientName(),
+                'final_status' => $order->status()->value()
+            ]);
+        } else {
+            // aqui guardo mi orden si no está delivered
+            $this->orderRepository->save($order);
+            
+            $this->logger->info('Order status advanced successfully', [
+                'order_id' => $order->id()->value(),
+                'new_status' => $order->status()->value()
+            ]);
+        }
+
         $this->cache->forget(self::CACHE_KEY);
 
-        // Log del evento
-        $this->logger->info('Order status advanced successfully', [
-            'order_id' => $order->id()->value(),
-            'new_status' => $order->status()->value()
-        ]);
-
-        // Retornamos el DTO
-        return OrderDto::fromDomain($order);
+        return $orderDto;
     }
 } 
