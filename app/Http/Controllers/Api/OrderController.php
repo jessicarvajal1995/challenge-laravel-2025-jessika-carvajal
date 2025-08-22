@@ -6,11 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\CreateOrderRequest;
 use App\Application\UseCases\CreateOrderUseCase;
 use App\Application\UseCases\GetActiveOrdersUseCase;
+use App\Application\UseCases\GetOrderByIdUseCase;
 use App\Application\UseCases\AdvanceOrderStatusUseCase;
 use App\Application\Commands\CreateOrderCommand;
 use App\Application\Commands\AdvanceOrderStatusCommand;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
 
 #[OA\Info(
@@ -35,6 +35,7 @@ class OrderController extends Controller
     public function __construct(
         private CreateOrderUseCase $createOrderUseCase,
         private GetActiveOrdersUseCase $getActiveOrdersUseCase,
+        private GetOrderByIdUseCase $getOrderByIdUseCase,
         private AdvanceOrderStatusUseCase $advanceOrderStatusUseCase
     ) {}
 
@@ -66,6 +67,7 @@ class OrderController extends Controller
         description: 'Error interno del servidor',
         content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')
     )]
+
     public function index(): JsonResponse
     {
         try {
@@ -118,6 +120,7 @@ class OrderController extends Controller
         description: 'Error interno del servidor',
         content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')
     )]
+
     public function store(CreateOrderRequest $request): JsonResponse
     {
         try {
@@ -146,7 +149,7 @@ class OrderController extends Controller
         path: '/api/orders/{id}',
         operationId: 'getOrderById',
         summary: 'Obtener detalle de una orden',
-        description: 'Muestra el detalle completo de una orden específica. **Nota: Este endpoint aún no está implementado con la nueva arquitectura hexagonal.**',
+        description: 'Muestra el detalle completo de una orden específica',
         tags: ['Orders']
     )]
     #[OA\Parameter(
@@ -173,22 +176,33 @@ class OrderController extends Controller
         content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')
     )]
     #[OA\Response(
-        response: 501,
-        description: 'Método no implementado',
-        content: new OA\JsonContent(
-            properties: [
-                'success' => new OA\Property(property: 'success', type: 'boolean', example: false),
-                'message' => new OA\Property(property: 'message', type: 'string', example: 'Método no implementado con la nueva arquitectura')
-            ]
-        )
+        response: 500,
+        description: 'Error interno del servidor',
+        content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')
     )]
+
     public function show(int $id): JsonResponse
     {
-        // TODO: Implementar GetOrderByIdUseCase
-        return response()->json([
-            'success' => false,
-            'message' => 'Método no implementado con la nueva arquitectura'
-        ], 501);
+        try {
+            $orderDto = $this->getOrderByIdUseCase->execute($id);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Orden obtenida exitosamente',
+                'data' => $orderDto->toArray()
+            ], 200);
+        } catch (\DomainException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 404);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener la orden',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     #[OA\Post(
@@ -236,6 +250,7 @@ class OrderController extends Controller
         description: 'Error interno del servidor',
         content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')
     )]
+
     public function advanceStatus(int $id): JsonResponse
     {
         try {
