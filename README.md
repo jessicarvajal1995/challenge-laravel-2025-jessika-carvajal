@@ -213,9 +213,43 @@ Content-Type: application/json
 GET /orders/{id}
 ```
 
+**Descripción:** Retorna el detalle completo de una orden específica.
+
 **Ejemplo:**
 ```bash
 curl -X GET http://localhost:8000/api/orders/1
+```
+
+**Respuesta:**
+```json
+{
+  "success": true,
+  "message": "Orden obtenida exitosamente",
+  "data": {
+    "id": 1,
+    "client_name": "Jessika Carvajal",
+    "status": "initiated",
+    "total_amount": 85,
+    "items": [
+      {
+        "id": 1,
+        "description": "Lomo saltado",
+        "quantity": 1,
+        "unit_price": 60,
+        "total_price": 60
+      },
+      {
+        "id": 2,
+        "description": "Inka Kola", 
+        "quantity": 2,
+        "unit_price": 10,
+        "total_price": 20
+      }
+    ],
+    "created_at": "2025-08-20 22:27:35",
+    "updated_at": "2025-08-22 15:54:31"
+  }
+}
 ```
 
 ### 4. **Avanzar estado de una orden**
